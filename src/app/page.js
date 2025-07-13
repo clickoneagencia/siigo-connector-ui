@@ -1,34 +1,40 @@
 import Image from "next/image";
-import styles from "./page.module.css";
 
 export default function Home() {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
+    <div style={{ padding: '2rem', textAlign: 'center' }}>
+      <main>
         <Image
-          className={styles.logo}
           src="/next.svg"
           alt="Next.js logo"
           width={180}
           height={38}
           priority
         />
-        <ol>
+        <ol style={{ marginTop: '2rem', textAlign: 'left', maxWidth: '600px', margin: '2rem auto' }}>
           <li>
             Get started by editing <code>src/app/page.js</code>.
           </li>
           <li>Save and see your changes instantly.</li>
         </ol>
 
-        <div className={styles.ctas}>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
           <a
-            className={styles.primary}
             href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
             target="_blank"
             rel="noopener noreferrer"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem 1.5rem',
+              backgroundColor: '#000',
+              color: '#fff',
+              borderRadius: '0.5rem',
+              textDecoration: 'none'
+            }}
           >
             <Image
-              className={styles.logo}
               src="/vercel.svg"
               alt="Vercel logomark"
               width={20}
@@ -40,17 +46,23 @@ export default function Home() {
             href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
             target="_blank"
             rel="noopener noreferrer"
-            className={styles.secondary}
+            style={{
+              padding: '0.75rem 1.5rem',
+              border: '1px solid #ccc',
+              borderRadius: '0.5rem',
+              textDecoration: 'none'
+            }}
           >
             Read our docs
           </a>
         </div>
       </main>
-      <footer className={styles.footer}>
+      <footer style={{ marginTop: '4rem', display: 'flex', gap: '1.5rem', justifyContent: 'center' }}>
         <a
           href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
           target="_blank"
           rel="noopener noreferrer"
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
           <Image
             aria-hidden
@@ -65,6 +77,7 @@ export default function Home() {
           href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
           target="_blank"
           rel="noopener noreferrer"
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
           <Image
             aria-hidden
@@ -79,6 +92,7 @@ export default function Home() {
           href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
           target="_blank"
           rel="noopener noreferrer"
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
           <Image
             aria-hidden
