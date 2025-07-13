@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Container, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Alert, Box, TablePagination, TableSortLabel, Chip } from "@mui/material";
+import { Container, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Alert, Box, TableSortLabel, Chip } from "@mui/material";
 import { useAuth } from "../auth-context";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 const DEFAULT_ORDER_BY = "timestamp";
 const DEFAULT_ORDER = "desc";
 
@@ -28,8 +28,7 @@ export default function LogsPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(PAGE_SIZE);
+  const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
   const [orderBy, setOrderBy] = useState(DEFAULT_ORDER_BY);
   const [order, setOrder] = useState(DEFAULT_ORDER);
@@ -42,8 +41,7 @@ export default function LogsPage() {
       try {
         const API_URL = process.env.NEXT_PUBLIC_API_URL;
         const token = localStorage.getItem("token");
-        const offset = page * rowsPerPage;
-        const res = await fetch(`${API_URL}/api/logs?limit=${rowsPerPage}&offset=${offset}&order_by=${orderBy}&order=${order}`, {
+        const res = await fetch(`${API_URL}/api/logs?limit=${PAGE_SIZE}&offset=${offset}&order_by=${orderBy}&order=${order}`, {
           headers: {
             "Authorization": `Bearer ${token}`,
           },
@@ -52,8 +50,8 @@ export default function LogsPage() {
           throw new Error("No se pudieron obtener los logs");
         }
         const data = await res.json();
-        setLogs(data.logs || []);
-        setTotal(data.total || 0);
+        setLogs(prev => offset === 0 ? (data.logs || []) : [...prev, ...(data.logs || [])]);
+        setTotal(typeof data.total === 'number' ? data.total : 0);
       } catch (err) {
         setError(err.message || "Error al obtener los logs");
       } finally {
@@ -63,22 +61,18 @@ export default function LogsPage() {
     if (isAuthenticated) {
       fetchLogs();
     }
-  }, [isAuthenticated, page, rowsPerPage, orderBy, order]);
+    // eslint-disable-next-line
+  }, [isAuthenticated, offset, orderBy, order]);
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
+  const handleLoadMore = () => {
+    setOffset(prev => prev + PAGE_SIZE);
   };
 
   const handleRequestSort = (property) => {
     const isAsc = orderBy === property && order === "asc";
     setOrder(isAsc ? "desc" : "asc");
     setOrderBy(property);
-    setPage(0);
+    setOffset(0);
   };
 
   if (!isAuthenticated) {
@@ -92,7 +86,7 @@ export default function LogsPage() {
           <Typography variant="h4" gutterBottom>
             Logs del sistema
           </Typography>
-          {loading ? (
+          {loading && logs.length === 0 ? (
             <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
               <CircularProgress />
             </Box>
@@ -172,16 +166,13 @@ export default function LogsPage() {
                   </TableBody>
                 </Table>
               </TableContainer>
-              <TablePagination
-                component="div"
-                count={total}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                rowsPerPageOptions={[5, 10, 25, 50]}
-                labelRowsPerPage="Filas por página"
-              />
+              {!loading && logs.length < total && (
+                <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                  <button onClick={handleLoadMore} style={{ padding: '8px 24px', fontSize: 16, borderRadius: 4, border: 'none', background: '#1976d2', color: '#fff', cursor: 'pointer' }}>
+                    Cargar más
+                  </button>
+                </Box>
+              )}
             </>
           )}
         </Paper>
