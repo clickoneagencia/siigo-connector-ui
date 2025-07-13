@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Container, Typography, Paper, Box, Card, CardContent, Grid, CircularProgress, Alert, IconButton, InputAdornment } from "@mui/material";
+import { Container, Typography, Paper, Box, Card, CardContent, Grid, CircularProgress, Alert, IconButton, InputAdornment, Snackbar } from "@mui/material";
 import { Visibility, VisibilityOff, ContentCopy, Check, Edit } from "@mui/icons-material";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from "@mui/material";
 import { useAuth } from "../auth-context";
@@ -13,6 +13,8 @@ export default function Dashboard() {
   const [copiedToken, setCopiedToken] = useState({});
   const [editCompany, setEditCompany] = useState(null);
   const [editName, setEditName] = useState("");
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [regenerating, setRegenerating] = useState(false);
   const { isAuthenticated } = useAuth();
 
   const handleToggleToken = (companyId) => {
@@ -37,6 +39,7 @@ export default function Dashboard() {
   const handleEditClose = () => {
     setEditCompany(null);
     setEditName("");
+    setSnackbar({ open: false, message: '', severity: 'success' });
   };
 
   const handleEditSave = () => {
@@ -108,9 +111,6 @@ export default function Dashboard() {
                         </Typography>
                         {company.key && (
                           <>
-                            <Typography variant="subtitle2" sx={{ mt: 2 }}>
-                              Key ID: {company.key.id}
-                            </Typography>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-all', flex: 1 }}>
                                 Token: {showTokens[company.id]
@@ -152,33 +152,57 @@ export default function Dashboard() {
             onChange={e => setEditName(e.target.value)}
             sx={{ mb: 2 }}
           />
+          {editCompany?.key?.id && (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              <strong>Key ID:</strong> {editCompany.key.id}
+            </Typography>
+          )}
           <TextField
             margin="dense"
             label="Token"
             type="text"
             fullWidth
             value={editCompany?.key?.token || ''}
-            InputProps={{ readOnly: true }}
+            InputProps={{ disabled: true }}
             sx={{ mb: 2 }}
           />
           <Button
             variant="outlined"
             fullWidth
             sx={{ mb: 2 }}
-            onClick={() => {
-              // Simulación de regenerar token (solo cambia localmente)
+            onClick={async () => {
               if (editCompany) {
-                setEditCompany({
-                  ...editCompany,
-                  key: {
-                    ...editCompany.key,
-                    token: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
-                  }
-                });
+                setRegenerating(true);
+                try {
+                  const API_URL = process.env.NEXT_PUBLIC_API_URL;
+                  const token = localStorage.getItem("token");
+                  const res = await fetch(`${API_URL}/api/keys`, {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ company_id: editCompany.id })
+                  });
+                  if (!res.ok) throw new Error('No se pudo regenerar el token');
+                  const data = await res.json();
+                  setEditCompany({
+                    ...editCompany,
+                    key: {
+                      ...editCompany.key,
+                      token: data.token
+                    }
+                  });
+                  setSnackbar({ open: true, message: 'Token regenerado correctamente', severity: 'success' });
+                } catch (e) {
+                  setSnackbar({ open: true, message: 'Error al regenerar el token', severity: 'error' });
+                }
+                setRegenerating(false);
               }
             }}
+            disabled={regenerating}
           >
-            Regenerar token
+            {regenerating ? <CircularProgress size={20} sx={{ color: 'primary.main' }} /> : 'Regenerar token'}
           </Button>
         </DialogContent>
         <DialogActions>
@@ -186,6 +210,16 @@ export default function Dashboard() {
           <Button onClick={handleEditSave} variant="contained">Guardar</Button>
         </DialogActions>
       </Dialog>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={2500}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 } 
