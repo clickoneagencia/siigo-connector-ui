@@ -12,6 +12,8 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { IconButton, InputAdornment } from '@mui/material';
+import { useAuth } from "../auth-context";
+import { useRouter } from "next/navigation";
 
 export default function Signin() {
   const [formData, setFormData] = useState({
@@ -22,6 +24,8 @@ export default function Signin() {
   const [errors, setErrors] = useState({});
   const [submitStatus, setSubmitStatus] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const { login } = useAuth();
+  const router = useRouter();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -70,6 +74,9 @@ export default function Signin() {
         if (response.ok) {
           if (data.access_token) {
             localStorage.setItem('token', data.access_token);
+            document.cookie = `token=${data.access_token}; path=/;`;
+            login();
+            router.push('/dashboard');
           }
           setSubmitStatus('success');
           setFormData({ email: '', password: '' });
