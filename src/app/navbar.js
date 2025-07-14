@@ -28,7 +28,10 @@ export default function Navbar() {
           )}
           <Button color="inherit" component={Link} href="/dashboard">Dashboard</Button>
           {isAuthenticated && (
-            <Button color="inherit" onClick={handleLogout}>Cerrar sesión</Button>
+            <>
+              <Button color="inherit" component={Link} href="/history">Historial</Button>
+              <Button color="inherit" onClick={handleLogout}>Cerrar sesión</Button>
+            </>
           )}
         </Box>
       </Toolbar>

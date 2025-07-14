@@ -2,13 +2,16 @@
 import Navbar from "./navbar";
 import Footer from "./footer";
 import { AuthProvider, useAuth } from "./auth-context";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function AppLayout({ children }) {
   const { isAuthenticated } = useAuth();
   return (
     <>
-      {isAuthenticated && <Navbar />}
-      {children}
+      <ProtectedRoute>
+        {isAuthenticated && <Navbar />}
+        {children}
+      </ProtectedRoute>
       <Footer />
     </>
   );

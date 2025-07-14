@@ -9,11 +9,38 @@ const AuthContext = createContext({
 
 export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Función helper para obtener token de localStorage
+  const getToken = useCallback(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("token");
+  }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setIsAuthenticated(!!localStorage.getItem("token"));
-    }
+    const checkAuth = async () => {
+      if (typeof window !== "undefined") {
+        const token = getToken();
+        
+        console.log('Checking token:', { 
+          hasToken: !!token 
+        });
+        
+        if (!token) {
+          console.log('No token found, setting authenticated to false');
+          setIsAuthenticated(false);
+          setIsLoading(false);
+          return;
+        }
+
+        // Si hay token, asumir que es válido
+        console.log('Token found, setting authenticated to true');
+        setIsAuthenticated(true);
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   const login = useCallback(() => {
@@ -21,13 +48,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(() => {
+    console.log('Logging out, clearing token from localStorage');
     setIsAuthenticated(false);
     localStorage.removeItem("token");
-    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

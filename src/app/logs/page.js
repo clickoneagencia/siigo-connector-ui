@@ -1,34 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Container, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Alert, Box, TableSortLabel, Chip } from "@mui/material";
+import { Container, Typography, Paper, Box, CircularProgress, Alert } from "@mui/material";
 import { useAuth } from "../auth-context";
+import LogsTable from "../components/LogsTable";
 
-const PAGE_SIZE = 20;
 const DEFAULT_ORDER_BY = "timestamp";
 const DEFAULT_ORDER = "desc";
-
-function getLevelColor(level) {
-  switch (level) {
-    case "ERROR":
-      return "error";
-    case "WARNING":
-      return "warning";
-    case "INFO":
-      return "info";
-    case "DEBUG":
-      return "default";
-    case "SUCCESS":
-      return "success";
-    default:
-      return "default";
-  }
-}
 
 export default function LogsPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [offset, setOffset] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
   const [total, setTotal] = useState(0);
   const [orderBy, setOrderBy] = useState(DEFAULT_ORDER_BY);
   const [order, setOrder] = useState(DEFAULT_ORDER);
@@ -36,12 +20,14 @@ export default function LogsPage() {
 
   useEffect(() => {
     const fetchLogs = async () => {
+      console.log('Fetching logs with page:', currentPage, 'rowsPerPage:', rowsPerPage, 'orderBy:', orderBy, 'order:', order);
       setLoading(true);
       setError("");
       try {
         const API_URL = process.env.NEXT_PUBLIC_API_URL;
         const token = localStorage.getItem("token");
-        const res = await fetch(`${API_URL}/api/logs?limit=${PAGE_SIZE}&offset=${offset}&order_by=${orderBy}&order=${order}`, {
+        const offset = (currentPage - 1) * rowsPerPage;
+        const res = await fetch(`${API_URL}/api/logs?limit=${rowsPerPage}&offset=${offset}&order_by=${orderBy}&order=${order}`, {
           headers: {
             "Authorization": `Bearer ${token}`,
           },
@@ -50,8 +36,14 @@ export default function LogsPage() {
           throw new Error("No se pudieron obtener los logs");
         }
         const data = await res.json();
-        setLogs(prev => offset === 0 ? (data.logs || []) : [...prev, ...(data.logs || [])]);
-        setTotal(typeof data.total === 'number' ? data.total : 0);
+        console.log('Logs API response:', data);
+        setLogs(data.logs || []);
+        // Buscar el total en diferentes campos posibles de la API
+        let newTotal = data.total || data.count || data.total_count || data.total_records || (data.logs ? data.logs.length : 0);
+        // Asegurar que sea un número válido
+        newTotal = typeof newTotal === 'number' && !isNaN(newTotal) ? newTotal : 0;
+        console.log('Setting total to:', newTotal, 'from data:', data);
+        setTotal(newTotal);
       } catch (err) {
         setError(err.message || "Error al obtener los logs");
       } finally {
@@ -61,23 +53,31 @@ export default function LogsPage() {
     if (isAuthenticated) {
       fetchLogs();
     }
-    // eslint-disable-next-line
-  }, [isAuthenticated, offset, orderBy, order]);
+  }, [isAuthenticated, currentPage, rowsPerPage, orderBy, order]);
 
-  const handleLoadMore = () => {
-    setOffset(prev => prev + PAGE_SIZE);
+  const handlePageChange = (newPage) => {
+    console.log('Logs page change to:', newPage);
+    setCurrentPage(newPage);
+  };
+
+  const handleRowsPerPageChange = (newRowsPerPage) => {
+    console.log('Logs rows per page change to:', newRowsPerPage);
+    setRowsPerPage(newRowsPerPage);
+    setCurrentPage(1); // Reset to first page when changing rows per page
   };
 
   const handleRequestSort = (property) => {
     const isAsc = orderBy === property && order === "asc";
     setOrder(isAsc ? "desc" : "asc");
     setOrderBy(property);
-    setOffset(0);
+    setCurrentPage(1); // Reset to first page when changing sort
   };
 
   if (!isAuthenticated) {
     return null;
   }
+
+  console.log('LogsPage render props:', { currentPage, rowsPerPage, total, logsLength: logs.length });
 
   return (
     <Container maxWidth="lg">
@@ -93,87 +93,19 @@ export default function LogsPage() {
           ) : error ? (
             <Alert severity="error">{error}</Alert>
           ) : (
-            <>
-              <TableContainer component={Paper} sx={{ mt: 2 }}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>
-                        <TableSortLabel
-                          active={orderBy === "id"}
-                          direction={orderBy === "id" ? order : "asc"}
-                          onClick={() => handleRequestSort("id")}
-                        >
-                          ID
-                        </TableSortLabel>
-                      </TableCell>
-                      <TableCell>
-                        <TableSortLabel
-                          active={orderBy === "timestamp"}
-                          direction={orderBy === "timestamp" ? order : "asc"}
-                          onClick={() => handleRequestSort("timestamp")}
-                        >
-                          Timestamp
-                        </TableSortLabel>
-                      </TableCell>
-                      <TableCell>
-                        <TableSortLabel
-                          active={orderBy === "level"}
-                          direction={orderBy === "level" ? order : "asc"}
-                          onClick={() => handleRequestSort("level")}
-                        >
-                          Nivel
-                        </TableSortLabel>
-                      </TableCell>
-                      <TableCell>
-                        <TableSortLabel
-                          active={orderBy === "logger_name"}
-                          direction={orderBy === "logger_name" ? order : "asc"}
-                          onClick={() => handleRequestSort("logger_name")}
-                        >
-                          Logger
-                        </TableSortLabel>
-                      </TableCell>
-                      <TableCell>
-                        <TableSortLabel
-                          active={orderBy === "message"}
-                          direction={orderBy === "message" ? order : "asc"}
-                          onClick={() => handleRequestSort("message")}
-                        >
-                          Mensaje
-                        </TableSortLabel>
-                      </TableCell>
-                      <TableCell>Módulo</TableCell>
-                      <TableCell>Función</TableCell>
-                      <TableCell>Línea</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {logs.map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell>{log.id}</TableCell>
-                        <TableCell>{log.timestamp}</TableCell>
-                        <TableCell>
-                          <Chip label={log.level} color={getLevelColor(log.level)} size="small" />
-                        </TableCell>
-                        <TableCell>{log.logger_name}</TableCell>
-                        <TableCell>{log.message}</TableCell>
-                        <TableCell>{log.module}</TableCell>
-                        <TableCell>{log.function}</TableCell>
-                        <TableCell>{log.line_number}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              {!loading && logs.length < total && (
-                <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
-                  <button onClick={handleLoadMore} style={{ padding: '8px 24px', fontSize: 16, borderRadius: 4, border: 'none', background: '#1976d2', color: '#fff', cursor: 'pointer' }}>
-                    Cargar más
-                  </button>
-                </Box>
-              )}
-            </>
+            <LogsTable
+              data={logs}
+              loading={loading}
+              error={error}
+              page={currentPage}
+              rowsPerPage={rowsPerPage}
+              totalCount={total}
+              onPageChange={handlePageChange}
+              onRowsPerPageChange={handleRowsPerPageChange}
+              orderBy={orderBy}
+              order={order}
+              onRequestSort={handleRequestSort}
+            />
           )}
         </Paper>
       </Box>
